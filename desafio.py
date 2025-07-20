@@ -40,13 +40,14 @@ class Historico:
     def __init__(self):
         self.transacoes = []
 
-    def adicionar_transacao(self, transacao):
-        self.transacoes.append(transacao)
-        
+    def adicionar_transacao(self, descricao):
+        data = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.transacoes.append({"descricao": descricao, "data": data})
+
     def gerar_relatorio(self, tipo=None):
         for transacao in self.transacoes:
-            if tipo is None or tipo.lower() in transacao.lower():
-                yield transacao
+            if tipo is None or tipo.lower() in transacao["descricao"].lower():
+                yield f"{transacao['data']} - {transacao['descricao']}"
 
 # Interface de transação
 class Transacao(ABC):
@@ -61,6 +62,9 @@ class Deposito(Transacao):
         
     @log_transacao
     def registrar(self, conta):
+        if conta.limite_transacoes_excedido():
+            print("Você excedeu o limite diário de 10 transações.")
+            return False
         if self.valor <= 0:
             print("Valor inválido para depósito!")
             return False
@@ -76,6 +80,9 @@ class Saque(Transacao):
 
     @log_transacao
     def registrar(self, conta):
+        if conta.limite_transacoes_excedido():
+            print("Você excedeu o limite diário de 10 transações.")
+            return False
         if self.valor > conta.saldo:
             print("Saldo insuficiente para saque!")
             return False
@@ -125,6 +132,16 @@ class Conta:
 
     def saldo_atual(self):
         return self.saldo
+
+    def transacoes_hoje(self):
+        hoje = datetime.now().date()
+        return [
+            t for t in self.historico.transacoes
+            if datetime.strptime(t["data"], "%Y-%m-%d %H:%M:%S").date() == hoje
+        ]
+
+    def limite_transacoes_excedido(self):
+        return len(self.transacoes_hoje()) >= 10
 
 # Conta Corrente
 class ContaCorrente(Conta):
@@ -198,8 +215,8 @@ def exibir_extrato(conta):
     if not conta.historico.transacoes:
         print("Não foram realizadas movimentações.")
     else:
-        for operacao in conta.historico.transacoes:
-            print(operacao)
+        for transacao in conta.historico.transacoes:
+            print(f"{transacao['data']} - {transacao['descricao']}")
     print(f"\nSaldo atual: R$ {conta.saldo:.2f}")
 
 def selecionar_conta():
