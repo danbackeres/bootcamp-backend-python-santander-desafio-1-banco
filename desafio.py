@@ -1,6 +1,39 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from functools import wraps
 import os
+
+# Decorador de LOG
+def log_transacao(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        resultado = func(*args, **kwargs)
+        if resultado:
+            print(f"[LOG {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Transação realizada: {func.__name__}")
+        return resultado
+    return wrapper
+   
+# Iterador    
+class ContaIterador:
+    def __init__(self, contas):
+        self._contas = contas
+        self._index = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self._index >= len(self._contas):
+            raise StopIteration
+        conta = self._contas[self._index]
+        self._index += 1
+        return {
+            "agencia": conta.agencia,
+            "numero": conta.numero,
+            "cliente": conta.cliente.nome,
+            "cpf": conta.cliente.cpf,
+            "saldo": conta.saldo
+        }    
 
 # Histórico de transações
 class Historico:
@@ -9,6 +42,11 @@ class Historico:
 
     def adicionar_transacao(self, transacao):
         self.transacoes.append(transacao)
+        
+    def gerar_relatorio(self, tipo=None):
+        for transacao in self.transacoes:
+            if tipo is None or tipo.lower() in transacao.lower():
+                yield transacao
 
 # Interface de transação
 class Transacao(ABC):
@@ -20,7 +58,8 @@ class Transacao(ABC):
 class Deposito(Transacao):
     def __init__(self, valor):
         self.valor = valor
-
+        
+    @log_transacao
     def registrar(self, conta):
         if self.valor <= 0:
             print("Valor inválido para depósito!")
@@ -35,6 +74,7 @@ class Saque(Transacao):
     def __init__(self, valor):
         self.valor = valor
 
+    @log_transacao
     def registrar(self, conta):
         if self.valor > conta.saldo:
             print("Saldo insuficiente para saque!")
@@ -105,6 +145,20 @@ class ContaCorrente(Conta):
 usuarios = []
 contas = []
 
+def exibir_relatorio(conta):
+    print("\n--- Relatório de Transações ---")
+    tipo = input("Filtrar por tipo (ex: saque, depósito) ou deixe em branco para todas: ").strip()
+    relatorio = conta.historico.gerar_relatorio(tipo if tipo else None)
+
+    tem_transacoes = False
+    for transacao in relatorio:
+        print(transacao)
+        tem_transacoes = True
+
+    if not tem_transacoes:
+        print("Nenhuma transação encontrada com esse filtro.")
+    print(f"Saldo atual: R$ {conta.saldo:.2f}")
+
 def criar_usuario():
     cpf = input("CPF (11 dígitos): ").strip()
     if not cpf.isdigit() or len(cpf) != 11:
@@ -136,8 +190,8 @@ def listar_contas():
     if not contas:
         print("Nenhuma conta cadastrada.")
         return
-    for conta in contas:
-        print(f"Agência: {conta.agencia}, Conta: {conta.numero}, Cliente: {conta.cliente.nome} (CPF: {conta.cliente.cpf})")
+    for info in ContaIterador(contas):
+        print(f"Agência: {info['agencia']}, Conta: {info['numero']}, Cliente: {info['cliente']} (CPF: {info['cpf']})")
 
 def exibir_extrato(conta):
     print("\nExtrato:")
@@ -167,6 +221,7 @@ Selecione a opção:
 5 - Extrato
 6 - Listar contas
 7 - Sair
+8 - Relatório de transações
 """)
         opcao = input("Opção: ").strip()
         if opcao == "1":
@@ -189,11 +244,16 @@ Selecione a opção:
                 exibir_extrato(conta)
         elif opcao == "6":
             listar_contas()
+        elif opcao == "8":
+            conta = selecionar_conta()
+            if conta:
+                exibir_relatorio(conta)
         elif opcao == "7":
             print("Obrigado e até logo!")
             break
         else:
             print("Opção inválida!")
+
 
 if __name__ == "__main__":
     main()
