@@ -9,9 +9,30 @@ def log_transacao(func):
     def wrapper(*args, **kwargs):
         resultado = func(*args, **kwargs)
         if resultado:
-            print(f"[LOG {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Transação realizada: {func.__name__}")
+            log_message = (
+                f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                f"Função: {func.__name__} | "
+                f"Args: {args} | Kwargs: {kwargs} | "
+                f"Retorno: {resultado}\n"
+            )
+            with open("log.txt", "a", encoding="utf-8") as f:
+                f.write(log_message)
         return resultado
     return wrapper
+    
+def log_geral(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        resultado = func(*args, **kwargs)
+        log_message = (
+            f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+            f"Ação: {func.__name__} | Args: {args} | Kwargs: {kwargs} | Retorno: {resultado}\n"
+        )
+        with open("log.txt", "a", encoding="utf-8") as f:
+            f.write(log_message)
+        return resultado
+    return wrapper
+
    
 # Iterador    
 class ContaIterador:
@@ -60,6 +81,9 @@ class Deposito(Transacao):
     def __init__(self, valor):
         self.valor = valor
         
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: valor=R$ {self.valor:.2f}>"    
+        
     @log_transacao
     def registrar(self, conta):
         if conta.limite_transacoes_excedido():
@@ -77,6 +101,9 @@ class Deposito(Transacao):
 class Saque(Transacao):
     def __init__(self, valor):
         self.valor = valor
+        
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: valor=R$ {self.valor:.2f}>"    
 
     @log_transacao
     def registrar(self, conta):
@@ -120,7 +147,10 @@ class PessoaFisica(Cliente):
         self.cpf = cpf
         self.nome = nome
         self.data_nascimento = data_nascimento
-
+        
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: nome={self.nome}, cpf={self.cpf}, nascimento={self.data_nascimento}>"
+    
 # Conta
 class Conta:
     def __init__(self, cliente, numero, agencia="0001"):
@@ -150,6 +180,9 @@ class ContaCorrente(Conta):
         self.limite = limite
         self.limite_saques = limite_saques
         self.numero_saques = 0
+        
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: agencia={self.agencia}, numero={self.numero}, saldo={self.saldo:.2f}, cliente={self.cliente.nome}>"
 
     def sacar(self, valor):
         saque = Saque(valor)
@@ -176,32 +209,37 @@ def exibir_relatorio(conta):
         print("Nenhuma transação encontrada com esse filtro.")
     print(f"Saldo atual: R$ {conta.saldo:.2f}")
 
+@log_geral
 def criar_usuario():
     cpf = input("CPF (11 dígitos): ").strip()
     if not cpf.isdigit() or len(cpf) != 11:
         print("CPF inválido!")
-        return
+        return None
     if any(u.cpf == cpf for u in usuarios):
         print("Já existe usuário com esse CPF!")
-        return
+        return None
     nome = input("Nome completo: ").strip()
     nascimento = input("Data de nascimento (dd/mm/aaaa): ").strip()
     endereco = input("Endereço: ").strip()
     usuario = PessoaFisica(cpf, nome, nascimento, endereco)
     usuarios.append(usuario)
     print("Usuário criado com sucesso!")
+    return usuario
 
+@log_geral
 def criar_conta_corrente():
     cpf = input("CPF do usuário: ").strip()
     usuario = next((u for u in usuarios if u.cpf == cpf), None)
     if not usuario:
         print("Usuário não encontrado!")
-        return
+        return None
     numero = len(contas) + 1
     conta = ContaCorrente(usuario, numero)
     usuario.adicionar_conta(conta)
     contas.append(conta)
     print(f"Conta criada! Agência: {conta.agencia} Conta: {conta.numero}")
+    return conta 
+
 
 def listar_contas():
     if not contas:

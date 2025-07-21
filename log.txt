@@ -1,0 +1,5 @@
+[2025-07-21 20:36:10] Ação: criar_usuario | Args: () | Kwargs: {} | Retorno: None
+[2025-07-21 20:38:46] Ação: criar_usuario | Args: () | Kwargs: {} | Retorno: <PessoaFisica: nome=Testando Teste, cpf=12345678971, nascimento=01/01/2001>
+[2025-07-21 20:39:04] Ação: criar_conta_corrente | Args: () | Kwargs: {} | Retorno: <ContaCorrente: agencia=0001, numero=1, saldo=0.00, cliente=Testando Teste>
+[2025-07-21 20:39:19] Função: registrar | Args: (<Deposito: valor=R$ 100.00>, <ContaCorrente: agencia=0001, numero=1, saldo=100.00, cliente=Testando Teste>) | Kwargs: {} | Retorno: True
+[2025-07-21 20:39:26] Função: registrar | Args: (<Saque: valor=R$ 20.00>, <ContaCorrente: agencia=0001, numero=1, saldo=80.00, cliente=Testando Teste>) | Kwargs: {} | Retorno: True
